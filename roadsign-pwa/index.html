@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="theme-color" content="#1a1a1a">
+    <meta name="description" content="RoadSign Evaluator - Evaluación inteligente de señalización vial">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RoadSign">
+    <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" href="/assets/icons/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="/assets/icons/favicon-16x16.png" sizes="16x16">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/dark-mode.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/phase2-components.css">
+    <link rel="stylesheet" href="/css/phase3-components.css">
+    
+    <title>🛣️ RoadSign Evaluator</title>
+</head>
+<body>
+    <div id="app" class="app-container">
+        
+        <!-- PANTALLA 0: SELECTOR DE MODO (Inicial) -->
+        <div id="screen-mode-selector" class="screen active">
+            <div class="screen-header">
+                <h1>🛣️ RoadSign Evaluator</h1>
+                <p class="subtitle">Evaluación inteligente de señalización vial</p>
+            </div>
+            
+            <div class="screen-content">
+                <h2>¿Cómo vas a evaluar hoy?</h2>
+                
+                <!-- Opción 1: Conducción -->
+                <div class="mode-card" id="mode-driving">
+                    <div class="mode-icon">🚗</div>
+                    <div class="mode-info">
+                        <h3>Conducción en Coche</h3>
+                        <ul class="mode-features">
+                            <li>✓ Video continuo en tiempo real</li>
+                            <li>✓ Detección automática de señales</li>
+                            <li>✓ GPS continuo</li>
+                            <li>✓ Registra automáticamente</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Opción 2: Foto/Barrido -->
+                <div class="mode-card" id="mode-static">
+                    <div class="mode-icon">📸</div>
+                    <div class="mode-info">
+                        <h3>Foto/Barrido Estático</h3>
+                        <ul class="mode-features">
+                            <li>✓ Capturas puntales de fotos</li>
+                            <li>✓ Evalúas manualmente</li>
+                            <li>✓ GPS puntual</li>
+                            <li>✓ Control total</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Opción 3: Auto-detectar -->
+                <div class="mode-card" id="mode-auto">
+                    <div class="mode-icon">🔄</div>
+                    <div class="mode-info">
+                        <h3>Auto-Detectar (Recomendado)</h3>
+                        <ul class="mode-features">
+                            <li>✓ IA detecta si conduces o no</li>
+                            <li>✓ Basado en GPS</li>
+                            <li>✓ Sin decisiones manuales</li>
+                            <li>✓ Inteligencia automática</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="screen-footer">
+                <button id="btn-start-session" class="btn btn-primary" disabled>
+                    ▶️ Iniciar Sesión
+                </button>
+                <p class="info-text" id="mode-selected-text">Selecciona un modo para empezar</p>
+            </div>
+        </div>
+        
+        <!-- PANTALLA 1: CAPTURA EN VIVO -->
+        <div id="screen-capture" class="screen">
+            <div class="screen-header">
+                <button id="btn-back-home" class="btn-icon">◄</button>
+                <h1 id="capture-mode-title">Modo Conducción</h1>
+                <div class="spacer"></div>
+            </div>
+            
+            <div class="screen-content">
+                <div id="video-container" class="video-container">
+                    <video id="video-preview" autoplay playsinline muted></video>
+                    <div id="fps-counter" class="fps-counter">FPS: 0</div>
+                </div>
+                
+                <div id="detection-info" class="detection-info hidden">
+                    <div class="detection-badge">
+                        <span class="detection-icon">📦</span>
+                        <span id="detected-signal" class="detection-text">Señal detectada</span>
+                    </div>
+                    <div class="detection-details">
+                        <p><strong>Zona:</strong> <span id="detected-zone">-</span></p>
+                        <p><strong>Calle:</strong> <span id="detected-street">-</span></p>
+                        <p><strong>Confianza:</strong> <span id="detection-confidence">-</span>%</p>
+                        <p><strong>Sugerencia IA:</strong> <span id="ai-suggestion" class="rating-badge">-</span></p>
+                    </div>
+                </div>
+                
+                <div class="stats-bar">
+                    <div class="stat">
+                        <span class="stat-label">Señales Detectadas</span>
+                        <span class="stat-value" id="total-signals">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Sesión</span>
+                        <span class="stat-value" id="session-timer">00:00</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">GPS</span>
+                        <span class="stat-icon" id="gps-status">📍</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="screen-footer">
+                <button id="btn-confirm-suggestion" class="btn btn-success" disabled>
+                    ✓ Confirmar Sugerencia
+                </button>
+                <button id="btn-change-rating" class="btn btn-warning" disabled>
+                    ✎ Cambiar Evaluación
+                </button>
+                <button id="btn-stop-session" class="btn btn-danger">
+                    ⏹️ Parar Sesión
+                </button>
+            </div>
+        </div>
+        
+        <!-- PANTALLA 2: EVALUACIÓN DETALLADA (Modal) -->
+        <div id="modal-evaluation" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Evaluar Señal</h2>
+                    <button id="btn-close-modal" class="btn-icon">✕</button>
+                </div>
+                
+                <div class="modal-body">
+                    <div id="eval-photo-container" class="eval-photo-container">
+                        <img id="eval-photo" src="" alt="Foto de la señal">
+                    </div>
+                    
+                    <div class="eval-info">
+                        <p><strong>📌 Señal:</strong> <span id="eval-signal-name">-</span></p>
+                        <p><strong>📍 Ubicación:</strong> <span id="eval-location">-</span></p>
+                        <p><strong>🕐 Hora:</strong> <span id="eval-time">-</span></p>
+                        <p><strong>🚗 Modo:</strong> <span id="eval-mode">-</span></p>
+                    </div>
+                    
+                    <!-- MÓDULO BASE -->
+                    <div class="parameter-section">
+                        <h3>⚡ Módulo Base (Obligatorio)</h3>
+                        
+                        <div class="ai-suggestion-box">
+                            <strong>Sugerencia IA:</strong> 
+                            <span id="eval-ai-suggestion" class="rating-badge">BUENO (4)</span>
+                            <span id="eval-ai-confidence" class="confidence-badge">[92%]</span>
+                        </div>
+                        
+                        <div class="rating-selector">
+                            <label><input type="radio" name="rating" value="5"> ⭐ Excelente (5)</label>
+                            <label><input type="radio" name="rating" value="4"> ⭐ Bueno (4)</label>
+                            <label><input type="radio" name="rating" value="3"> ⭐ Regular (3)</label>
+                            <label><input type="radio" name="rating" value="2"> ⭐ Malo (2)</label>
+                            <label><input type="radio" name="rating" value="1"> ⭐ Pésimo (1)</label>
+                        </div>
+                        
+                        <div class="checkbox-group">
+                            <h4>Tipos de Daño:</h4>
+                            <label><input type="checkbox" name="damage" value="fading"> Decoloración</label>
+                            <label><input type="checkbox" name="damage" value="physical"> Daño Físico</label>
+                            <label><input type="checkbox" name="damage" value="reflectivity"> Pérdida Reflectividad</label>
+                            <label><input type="checkbox" name="damage" value="dirt"> Suciedad</label>
+                        </div>
+                        
+                        <div class="radio-group">
+                            <h4>Condiciones Climáticas:</h4>
+                            <label><input type="radio" name="weather" value="sunny"> ☀️ Soleado</label>
+                            <label><input type="radio" name="weather" value="cloudy"> ☁️ Nublado</label>
+                            <label><input type="radio" name="weather" value="rainy"> 🌧️ Lluvia</label>
+                            <label><input type="radio" name="weather" value="night"> 🌙 Noche</label>
+                        </div>
+                    </div>
+                    
+                    <!-- MÓDULOS ADICIONALES (Se cargan dinámicamente) -->
+                    <div id="dynamic-modules-container"></div>
+                    
+                    <!-- Comentarios -->
+                    <div class="textarea-group">
+                        <h4>💬 Comentarios (Opcional):</h4>
+                        <textarea id="eval-comments" placeholder="Notas adicionales sobre la señal..."></textarea>
+                    </div>
+                    
+                    <!-- Resumen de Impacto -->
+                    <div class="impact-summary">
+                        <h4>Resumen del Impacto:</h4>
+                        <div class="impact-row">
+                            <span>Base:</span>
+                            <span id="impact-base">4.0</span>
+                        </div>
+                        <div id="impact-modules-container"></div>
+                        <div class="impact-row final">
+                            <span>Rating Final:</span>
+                            <span id="impact-final">4.0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button id="btn-save-evaluation" class="btn btn-primary">
+                        ✅ Guardar Evaluación
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PANTALLA 3: HOME (Dashboard) -->
+        <div id="screen-home" class="screen">
+            <div class="screen-header">
+                <h1>🛣️ RoadSign</h1>
+                <button id="btn-settings" class="btn-icon">⚙️</button>
+            </div>
+            
+            <div class="screen-content">
+                <div class="session-summary" id="session-summary-card">
+                    <h2>Última Sesión</h2>
+                    <div class="summary-stats">
+                        <div class="summary-stat">
+                            <span class="stat-value">-</span>
+                            <span class="stat-label">Evaluaciones</span>
+                        </div>
+                        <div class="summary-stat">
+                            <span class="stat-value">-</span>
+                            <span class="stat-label">Zonas</span>
+                        </div>
+                        <div class="summary-stat">
+                            <span class="stat-value">-</span>
+                            <span class="stat-label">Tiempo</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="zone-alerts" id="zone-alerts-container">
+                    <!-- Se llena dinámicamente con badges de cobertura -->
+                </div>
+                
+                <div class="action-buttons">
+                    <button id="btn-new-session-home" class="btn btn-large btn-primary">
+                        🎥 Nueva Sesión
+                    </button>
+                    <button id="btn-dashboard" class="btn btn-large">
+                        📊 Dashboard
+                    </button>
+                    <button id="btn-evaluations" class="btn btn-large">
+                        📋 Mis Evaluaciones
+                    </button>
+                </div>
+            </div>
+            
+            <div class="bottom-nav">
+                <button class="nav-btn active" data-screen="home">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">Inicio</span>
+                </button>
+                <button class="nav-btn" data-screen="capture">
+                    <span class="nav-icon">📹</span>
+                    <span class="nav-label">Captura</span>
+                </button>
+                <button class="nav-btn" data-screen="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">Dashboard</span>
+                </button>
+                <button class="nav-btn" data-screen="settings">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-label">Config</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- PANTALLA: SETTINGS (FASE 2) -->
+        <div id="screen-settings" class="screen">
+            <div class="screen-header">
+                <button id="btn-back-settings" class="btn-icon">◄</button>
+                <h1>⚙️ Parámetros</h1>
+                <div class="spacer"></div>
+            </div>
+            
+            <div class="screen-content">
+                <div class="settings-intro">
+                    <p>Activa o desactiva módulos de evaluación. Cada módulo agrega criterios adicionales.</p>
+                </div>
+                
+                <div id="parameters-settings-container">
+                    <!-- Se rellena dinámicamente por parametersUIManager -->
+                </div>
+                
+                <div class="learning-info">
+                    <h3>✨ Estado del Aprendizaje</h3>
+                    <p class="learning-description">La app aprende de tus confirmaciones y mejora automáticamente.</p>
+                    
+                    <div class="learning-stats">
+                        <div class="learning-stat">
+                            <span class="stat-label">Confirmaciones</span>
+                            <span class="stat-value" id="learning-confirmations">0</span>
+                        </div>
+                        <div class="learning-stat">
+                            <span class="stat-label">Precisión</span>
+                            <span class="stat-value" id="learning-accuracy">--</span>
+                        </div>
+                        <div class="learning-stat">
+                            <span class="stat-label">Mejora Total</span>
+                            <span class="stat-value" id="learning-improvement">+0.0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="learning-details" id="learning-details">
+                        <!-- Se llena con detalles de aprendizaje -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="screen-footer">
+                <button id="btn-reset-learning" class="btn btn-danger">
+                    🔄 Resetear Aprendizaje
+                </button>
+            </div>
+        </div>
+        
+        <!-- PANTALLA: AI TRAINING (FASE 3) -->
+        <div id="screen-ai-training" class="screen">
+            <div class="screen-header">
+                <button id="btn-back-ai-training" class="btn-icon">◄</button>
+                <h1>🧠 Entrenar Modelo IA</h1>
+                <div class="spacer"></div>
+            </div>
+            
+            <div class="screen-content">
+                <div class="ai-training-section">
+                    <h3>Estado del Modelo</h3>
+                    <div class="ai-status-card">
+                        <div class="status-item">
+                            <span class="status-label">Estado Modelo:</span>
+                            <span class="status-value" id="ai-model-status">No inicializado</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Muestras de Entrenamiento:</span>
+                            <span class="status-value" id="ai-training-samples">0</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Precisión Actual:</span>
+                            <span class="status-value" id="ai-accuracy">--</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="ai-training-section">
+                    <h3>Cargar Datos de Entrenamiento</h3>
+                    <p class="section-description">Carga imágenes de señales de tráfico etiquetadas</p>
+                    <input type="file" id="ai-training-file" accept=".json,.csv" class="file-input">
+                    <button id="btn-load-training-data" class="btn btn-primary">📂 Cargar Datos</button>
+                </div>
+                
+                <div class="ai-training-section">
+                    <h3>Entrenar Modelo</h3>
+                    <p class="section-description">Entrenar la red neuronal con los datos cargados</p>
+                    <div class="training-controls">
+                        <label>Epochs (iteraciones):</label>
+                        <input type="number" id="ai-epochs" value="10" min="1" max="100">
+                        
+                        <label>Batch Size:</label>
+                        <input type="number" id="ai-batch-size" value="32" min="8" max="128">
+                    </div>
+                    <button id="btn-train-model" class="btn btn-success">🚀 Iniciar Entrenamiento</button>
+                </div>
+                
+                <div class="ai-training-section">
+                    <h3>Progreso del Entrenamiento</h3>
+                    <div class="training-progress" id="ai-training-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="ai-progress-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="progress-text" id="ai-progress-text">Esperando entrenamiento...</div>
+                    </div>
+                </div>
+                
+                <div class="ai-training-section">
+                    <h3>Acciones</h3>
+                    <button id="btn-save-model" class="btn btn-secondary">💾 Guardar Modelo</button>
+                    <button id="btn-export-training" class="btn btn-secondary">📥 Exportar Historial</button>
+                    <button id="btn-reset-model" class="btn btn-danger">🔄 Resetear Modelo</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PANTALLA: AI CLASSIFICATION (FASE 3) -->
+        <div id="screen-ai-classification" class="screen">
+            <div class="screen-header">
+                <button id="btn-back-ai-classification" class="btn-icon">◄</button>
+                <h1>🤖 Clasificador IA</h1>
+                <div class="spacer"></div>
+            </div>
+            
+            <div class="screen-content">
+                <div class="ai-classification-section">
+                    <h3>Captura de Imagen</h3>
+                    <div class="capture-area">
+                        <video id="ai-classification-video" width="100%" height="auto" style="display: none;"></video>
+                        <canvas id="ai-classification-canvas" style="display: none;"></canvas>
+                        <img id="ai-classification-image" style="display: none; width: 100%; max-width: 400px;">
+                        <div id="ai-image-preview" class="image-preview">📷 Vista previa</div>
+                    </div>
+                    <button id="btn-capture-signal" class="btn btn-primary">📸 Capturar Imagen</button>
+                    <button id="btn-upload-signal" class="btn btn-primary">📂 Cargar Imagen</button>
+                </div>
+                
+                <div class="ai-classification-section">
+                    <h3>Resultados de Clasificación</h3>
+                    <div class="classification-results" id="ai-classification-results">
+                        <p style="color: #999;">Carga una imagen para clasificar</p>
+                    </div>
+                </div>
+                
+                <div class="ai-classification-section">
+                    <h3>Predicción Detallada</h3>
+                    <div class="prediction-details" id="ai-prediction-details">
+                        <p style="color: #999;">Las predicciones aparecerán aquí</p>
+                    </div>
+                </div>
+                
+                <div class="ai-classification-section">
+                    <h3>Feedback para Mejora</h3>
+                    <p class="section-description">Corrige la predicción si es incorrecta</p>
+                    <div class="feedback-controls">
+                        <label>¿Cuál es el tipo de señal correcto?</label>
+                        <select id="ai-correct-signal-type">
+                            <option value="">Seleccionar...</option>
+                            <option value="stop">Señal de ALTO (STOP)</option>
+                            <option value="yield">Señal de CEDA EL PASO</option>
+                            <option value="speed_limit">Límite de VELOCIDAD</option>
+                            <option value="prohibition">PROHIBICIÓN</option>
+                            <option value="obligation">OBLIGACIÓN</option>
+                            <option value="information">INFORMACIÓN</option>
+                            <option value="warning">ADVERTENCIA</option>
+                            <option value="unknown">DESCONOCIDA</option>
+                        </select>
+                    </div>
+                    <button id="btn-send-feedback" class="btn btn-secondary">✅ Enviar Feedback</button>
+                </div>
+                
+                <div class="ai-classification-section">
+                    <h3>Estadísticas</h3>
+                    <div class="ai-stats-display" id="ai-stats-display">
+                        <div class="stat-item">
+                            <span>Clasificaciones:</span>
+                            <span id="ai-stat-total">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Verificadas:</span>
+                            <span id="ai-stat-verified">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Precisión:</span>
+                            <span id="ai-stat-accuracy">0%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span>Confianza Promedio:</span>
+                            <span id="ai-stat-confidence">0%</span>
+                        </div>
+                    </div>
+                    <button id="btn-export-classifications" class="btn btn-secondary">📥 Exportar Resultados</button>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(err => {
+                console.warn('Service Worker registration failed:', err);
+            });
+        }
+    </script>
+    
+    <!-- Application Scripts -->
+    <script src="/js/db.js"></script>
+    <script src="/js/modes.js"></script>
+    <script src="/js/camera.js"></script>
+    <script src="/js/app.js"></script>
+    
+    <!-- FASE 2 Scripts -->
+    <script src="/js/parameters.js"></script>
+    <script src="/js/heuristics.js"></script>
+    <script src="/js/parameters-ui.js"></script>
+    
+    <!-- FASE 3: TensorFlow.js y módulos de IA -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.0.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0"></script>
+    <script src="/js/ai/featureExtractor.js"></script>
+    <script src="/js/ai/aiModel.js"></script>
+    <script src="/js/ai/signalClassifier.js"></script>
+    
+    <!-- Crear botón ⚙️ DIRECTO - SIN DEPENDER DE WINDOW.APP -->
+    <script>
+    function createFloatingButton() {
+        const floatingContainer = document.createElement('div');
+        floatingContainer.id = 'floating-btn-container';
+        floatingContainer.style.position = 'fixed';
+        floatingContainer.style.top = '10px';
+        floatingContainer.style.right = '10px';
+        floatingContainer.style.zIndex = '9999';
+        
+        const btn = document.createElement('button');
+        btn.id = 'btn-settings';
+        btn.textContent = '⚙️';
+        btn.style.width = '50px';
+        btn.style.height = '50px';
+        btn.style.borderRadius = '50%';
+        btn.style.border = 'none';
+        btn.style.background = '#007AFF';
+        btn.style.color = 'white';
+        btn.style.fontSize = '24px';
+        btn.style.cursor = 'pointer';
+        btn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+        btn.style.display = 'block';
+        btn.style.padding = '0';
+        
+        // SOLUCIÓN DIRECTA: Cambiar pantalla sin depender de app.js
+        btn.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Ocultar TODAS las pantallas
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            // Mostrar screen-settings
+            const settingsScreen = document.getElementById('screen-settings');
+            if (settingsScreen) {
+                settingsScreen.classList.add('active');
+                console.log('✅ Settings screen opened directly');
+                
+                // Llamar a updateSettingsScreen si app está listo
+                if (window.app && window.app.updateSettingsScreen) {
+                    window.app.updateSettingsScreen();
+                }
+            } else {
+                console.log('❌ screen-settings not found');
+            }
+        };
+        
+        floatingContainer.appendChild(btn);
+        document.body.appendChild(floatingContainer);
+        console.log('✅ FLOATING BUTTON CREATED');
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', createFloatingButton);
+    } else {
+        createFloatingButton();
+    }
+    </script>
+</body>
+</html>
