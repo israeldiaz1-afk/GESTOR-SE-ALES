@@ -1,0 +1,8 @@
+.scan-line{position:absolute;left:0;right:0;height:2px;background:linear-gradient(to right,transparent,var(--accent),transparent);opacity:.6;animation:scanLine 2.5s ease-in-out infinite;pointer-events:none;}
+@keyframes scanLine{0%{top:20%;opacity:0;}10%{opacity:.6;}90%{opacity:.6;}100%{top:80%;opacity:0;}}
+.viewfinder{position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);width:72%;max-width:300px;aspect-ratio:1;pointer-events:none;}
+.viewfinder-corner{position:absolute;width:20px;height:20px;border-color:rgba(245,197,24,.5);border-style:solid;}
+.viewfinder-corner:nth-child(1){top:0;left:0;border-width:2px 0 0 2px;border-radius:3px 0 0 0;}
+.viewfinder-corner:nth-child(2){top:0;right:0;border-width:2px 2px 0 0;border-radius:0 3px 0 0;}
+.viewfinder-corner:nth-child(3){bottom:0;left:0;border-width:0 0 2px 2px;border-radius:0 0 0 3px;}
+.viewfinder-corner:nth-child(4){bottom:0;right:0;border-width:0 2px 2px 0;border-radius:0 0 3px 0;}
