@@ -23,6 +23,7 @@ const YoloDetector = (() => {
   let _ppCanvas = null;   // canvas de preprocesado (reutilizado)
   let _ppCtx = null;
   let _floatBuf = null;   // buffer Float32 del tensor (reutilizado)
+  let _diagDone = false;  // diagnóstico de salida (solo una vez)
 
   // Ruta del modelo dentro del repo (el usuario sube su model.onnx aquí)
   const MODEL_URL = './models/model.onnx';
@@ -40,6 +41,11 @@ const YoloDetector = (() => {
         if (window.ort) {
           // Configurar rutas de los binarios WASM
           window.ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/';
+          // ESTABILIDAD MÓVIL: limitar hilos WASM (evita saturar CPU/memoria)
+          // Usar como mucho 2 hilos para no tumbar el dispositivo
+          const cores = (navigator.hardwareConcurrency || 4);
+          window.ort.env.wasm.numThreads = Math.min(2, Math.max(1, cores - 2));
+          window.ort.env.wasm.simd = true;
           resolve(window.ort);
         } else {
           reject(new Error('ONNX Runtime no se cargó'));
@@ -84,27 +90,19 @@ const YoloDetector = (() => {
         if (lblRes.ok) _labels = await lblRes.json();
       } catch {}
 
-      // 4. Crear sesión de inferencia (intentar WebGL, luego WASM)
+      // 4. Crear sesión de inferencia
+      // ESTABILIDAD: usar SOLO WASM. El backend WebGL de onnxruntime-web es
+      // inestable con modelos grandes y puede agotar la memoria GPU del móvil
+      // (causando cuelgues e incluso reinicios del dispositivo).
       onProgress?.('Inicializando red neuronal…', 60);
-      const providers = [];
-      // WebGL es más rápido en móvil si está disponible
-      try { providers.push('webgl'); } catch {}
-      providers.push('wasm');
-
-      try {
-        _session = await ort.InferenceSession.create(MODEL_URL, {
-          executionProviders: providers,
-          graphOptimizationLevel: 'all',
-        });
-        _backend = 'webgl';
-      } catch (e) {
-        // Fallback solo WASM
-        _session = await ort.InferenceSession.create(MODEL_URL, {
-          executionProviders: ['wasm'],
-          graphOptimizationLevel: 'all',
-        });
-        _backend = 'wasm';
-      }
+      _session = await ort.InferenceSession.create(MODEL_URL, {
+        executionProviders: ['wasm'],
+        graphOptimizationLevel: 'all',
+        enableCpuMemArena: false,   // menos consumo de memoria
+        enableMemPattern: false,
+        executionMode: 'sequential',
+      });
+      _backend = 'wasm';
 
       _inputName = _session.inputNames[0] || 'images';
 
@@ -177,6 +175,22 @@ const YoloDetector = (() => {
       const outName = _session.outputNames[0];
       const data = output[outName].data;
       const dims = output[outName].dims; // típicamente [1, 4+nc, 8400]
+
+      // DIAGNÓSTICO: registrar forma de salida y score máximo (solo 1ª vez)
+      if (!_diagDone) {
+        _diagDone = true;
+        let gmax = 0;
+        const ch = dims[1], an = dims[2], ncls = ch - 4;
+        for (let a = 0; a < an; a++) {
+          for (let c = 0; c < ncls; c++) {
+            const s = data[(4 + c) * an + a];
+            if (s > gmax) gmax = s;
+          }
+        }
+        console.log('[YOLO diag] salida dims:', JSON.stringify(dims),
+                    '| score máximo en frame:', gmax.toFixed(3),
+                    '| nº clases:', ncls, '| labels cargadas:', _labels.length);
+      }
 
       const detections = _decodeOutput(data, dims, scale, padX, padY, scoreThreshold);
       return _nms(detections, iouThreshold);

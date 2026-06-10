@@ -105,10 +105,14 @@ const Detector = (() => {
     // 480px de ancho es suficiente para detectar señales y mucho más rápido.
     const ANALYSIS_W = 480;
 
-    // Throttling adaptativo: el intervalo se ajusta al tiempo real de inferencia
-    let interval = _useYolo ? 150 : 200;
-    const MIN_INTERVAL = _useYolo ? 120 : 150;
-    const MAX_INTERVAL = 600;
+    // Throttling adaptativo con valores REALISTAS para WASM en móvil.
+    // YOLOv8s en WASM puede tardar 1-3s por inferencia; forzar intervalos
+    // bajos saturaría el dispositivo. Damos margen amplio.
+    let interval = _useYolo ? 800 : 200;
+    const MIN_INTERVAL = _useYolo ? 500 : 150;   // nunca más rápido que esto
+    const MAX_INTERVAL = 2500;
+    // Descanso fijo extra tras cada inferencia, para que el dispositivo respire
+    const REST_AFTER = _useYolo ? 250 : 0;
 
     const loop = async () => {
       if (!_running) return;
@@ -145,13 +149,13 @@ const Detector = (() => {
             _fcount = 0; _fts = now;
           }
 
-          // Ajuste adaptativo: si la inferencia tardó mucho, dar más respiro
+          // Ajuste adaptativo: el intervalo se basa en lo que tardó la inferencia
+          // más un descanso fijo, para no encadenar inferencias sin respiro
           const elapsed = performance.now() - t0;
-          if (elapsed > interval) {
-            interval = Math.min(Math.round(elapsed * 1.2), MAX_INTERVAL);
-          } else {
-            interval = Math.max(Math.round(interval * 0.9), MIN_INTERVAL);
-          }
+          interval = Math.min(
+            Math.max(Math.round(elapsed) + REST_AFTER, MIN_INTERVAL),
+            MAX_INTERVAL
+          );
         } catch(e) {
           Logger.warn('loop:', e);
         }

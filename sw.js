@@ -1,5 +1,5 @@
 'use strict';
-const CACHE = 'roadsign-v1.5';
+const CACHE = 'roadsign-v1.6';
 const ASSETS = [
   './',
   './index.html',
