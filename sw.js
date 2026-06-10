@@ -1,5 +1,5 @@
 'use strict';
-const CACHE = 'roadsign-v1.6';
+const CACHE = 'roadsign-v1.7';
 const ASSETS = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ const ASSETS = [
   './css/evaluation.css',
   './css/responsive.css',
   './js/config.js',
+  './js/utils/debugPanel.js',
   './js/utils/logger.js',
   './js/utils/geo.js',
   './js/utils/image.js',
