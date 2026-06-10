@@ -342,7 +342,13 @@ async function _handlePhotoFile(file) {
     let dets = [];
     if (App.aiReady) {
       dets = await Detector.detectFrame(sized); // async (YOLO o color)
-      if (dets.length > 0) DetectionUI.drawOnPhoto(pc, dets);
+      console.log('[APP diag] detectFrame devolvió', dets.length, 'detecciones | aiReady:', App.aiReady, '| motor:', Detector.getEngine());
+      if (dets.length > 0) {
+        console.log('[APP diag] 1ª detección:', dets[0].signType, dets[0].category, 'bbox:', dets[0].bbox.map(n=>Math.round(n)));
+        DetectionUI.drawOnPhoto(pc, dets);
+      }
+    } else {
+      console.log('[APP diag] App.aiReady es FALSE — no se ejecuta detección');
     }
 
     if (dets.length === 0) {

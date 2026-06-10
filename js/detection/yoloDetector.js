@@ -24,6 +24,7 @@ const YoloDetector = (() => {
   let _ppCtx = null;
   let _floatBuf = null;   // buffer Float32 del tensor (reutilizado)
   let _diagDone = false;  // diagnóstico de salida (solo una vez)
+  let _diagCount = 0;     // diagnóstico de conteo
 
   // Ruta del modelo dentro del repo (el usuario sube su model.onnx aquí)
   const MODEL_URL = './models/model.onnx';
@@ -193,7 +194,14 @@ const YoloDetector = (() => {
       }
 
       const detections = _decodeOutput(data, dims, scale, padX, padY, scoreThreshold);
-      return _nms(detections, iouThreshold);
+      const final = _nms(detections, iouThreshold);
+      if (!_diagCount || _diagCount < 3) {
+        _diagCount = (_diagCount || 0) + 1;
+        console.log('[YOLO diag2] tras umbral:', detections.length,
+                    '| tras NMS:', final.length,
+                    (final[0] ? `| 1ª: ${final[0].label} score ${final[0].score.toFixed(2)} bbox [${final[0].bbox.map(n=>Math.round(n)).join(',')}]` : ''));
+      }
+      return final;
     } catch (e) {
       Logger.warn('YOLO detect error:', e);
       return [];
