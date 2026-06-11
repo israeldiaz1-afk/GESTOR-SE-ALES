@@ -105,7 +105,50 @@ const DetectionUI = (() => {
 
   function getAccumulated()  { return [..._accumulated]; }
   function clearAccumulated(){ _accumulated = []; }
-  function drawOnPhoto(canvas, dets) { drawDetections(canvas, dets); }
+  function drawOnPhoto(canvas, dets) {
+    // En modo foto, el canvas YA contiene la foto dibujada y su tamaño
+    // coincide con el espacio de las detecciones (sized). NO redimensionar
+    // ni borrar: dibujar las cajas directamente encima de la foto.
+    if (!dets || dets.length === 0) return;
+    console.log('[DRAW diag] dibujando', dets.length, 'cajas en canvas', canvas.width + 'x' + canvas.height, '| 1ª bbox:', dets[0].bbox.map(n=>Math.round(n)), '| sourceW/H:', dets[0].sourceW, dets[0].sourceH);
+    const ctx = canvas.getContext('2d');
+
+    for (const det of dets) {
+      // Las coordenadas vienen en el espacio del canvas de análisis (sized),
+      // que es el MISMO canvas. sourceW/H deberían igualar canvas.width/height.
+      const srcW = det.sourceW || canvas.width;
+      const srcH = det.sourceH || canvas.height;
+      const sx = canvas.width  / srcW;
+      const sy = canvas.height / srcH;
+
+      const [bx, by, bw, bh] = det.bbox;
+      const x = bx*sx, y = by*sy, w = bw*sx, h = bh*sy;
+      if (w < 4 || h < 4) continue;
+
+      const color = COLORS[det.category] || '#f5c518';
+      const label = (SIGN_CATALOG[det.signType]?.label || det.signType) + ' ' + Math.round((det.confidence||0)*100) + '%';
+
+      // Grosor proporcional al tamaño de la imagen (visible en foto grande)
+      const lw = Math.max(3, canvas.width / 200);
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lw;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = lw * 2;
+      ctx.strokeRect(x, y, w, h);
+      ctx.restore();
+
+      // Etiqueta
+      const fontSize = Math.max(14, canvas.width / 32);
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      const tw = ctx.measureText(label).width;
+      const ly = y > fontSize + 6 ? y - 4 : y + h + fontSize + 2;
+      ctx.fillStyle = color;
+      ctx.fillRect(x - lw/2, ly - fontSize, tw + 10, fontSize + 6);
+      ctx.fillStyle = '#000';
+      ctx.fillText(label, x + 4, ly);
+    }
+  }
 
   return { drawDetections, accumulate, getAccumulated, clearAccumulated, drawOnPhoto };
 })();
