@@ -14,3 +14,8 @@ input[type=text],input[type=email],input[type=number],select{width:100%;backgrou
 .nav-arrow{width:32px;height:32px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text-secondary);font-size:20px;display:flex;align-items:center;justify-content:center;transition:background .15s;}.nav-arrow:disabled{opacity:.3;pointer-events:none;}.nav-arrow:active{background:var(--bg-card);color:var(--accent);}
 .profile-card{cursor:default;}.profile-active{border-color:var(--border-accent);background:var(--bg-elevated);}
 .profile-badge{font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:1px;padding:2px 6px;border-radius:3px;background:var(--accent-glow);color:var(--accent);border:1px solid var(--border-accent);vertical-align:middle;margin-left:6px;}
+
+/* Control de ajustes (selector) */
+.settings-control-row{display:flex;flex-direction:column;gap:6px;padding:10px 0;}
+.settings-control-row label{font-size:13px;color:var(--text-muted);}
+.settings-select{background:var(--bg-elevated);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:14px;width:100%;}

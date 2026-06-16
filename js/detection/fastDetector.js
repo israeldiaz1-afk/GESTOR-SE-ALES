@@ -17,32 +17,27 @@ const FastDetector = (() => {
   let _ready = false;
   let _available = false;
   let _inputName = 'images';
-  const _inputSize = 480;   // DEBE coincidir con imgsz del entrenamiento (480)
+  let _inputSize = 480;   // DEBE coincidir con el imgsz de exportación del modelo.
+  // NOTA: el modelo se exportó a 480 fijo. Cambiar esto solo funciona si
+  // re-exportas el modelo a esa resolución. Por defecto 480.
+  function setInputSize(s) { _inputSize = s; }
 
   // Canvas y buffer reutilizables (rendimiento)
   let _ppCanvas = null, _ppCtx = null, _floatBuf = null;
   let _diagDone = false;
 
   const MODEL_URL = './models/model_detector.onnx';
-  const ORT_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js';
 
-  function _loadORT() {
-    return new Promise((resolve, reject) => {
-      if (window.ort) return resolve(window.ort);
-      const script = document.createElement('script');
-      script.src = ORT_CDN;
-      script.onload = () => {
-        if (window.ort) {
-          window.ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/';
-          const cores = (navigator.hardwareConcurrency || 4);
-          window.ort.env.wasm.numThreads = Math.min(2, Math.max(1, cores - 2));
-          window.ort.env.wasm.simd = true;
-          resolve(window.ort);
-        } else reject(new Error('ORT no cargó'));
-      };
-      script.onerror = () => reject(new Error('No se pudo descargar ORT'));
-      document.head.appendChild(script);
-    });
+  // Reutiliza ONNX Runtime ya cargado (por YoloDetector). Si no está,
+  // espera a que aparezca window.ort (yoloDetector lo carga primero).
+  async function _ensureORT() {
+    if (window.ort) return window.ort;
+    // Esperar hasta 10s a que YoloDetector cargue ORT
+    for (let i = 0; i < 100; i++) {
+      if (window.ort) return window.ort;
+      await new Promise(r => setTimeout(r, 100));
+    }
+    throw new Error('ONNX Runtime no disponible');
   }
 
   async function _modelExists() {
@@ -59,7 +54,7 @@ const FastDetector = (() => {
     }
     try {
       onProgress?.('Cargando detector rápido…', 50);
-      const ort = await _loadORT();
+      const ort = await _ensureORT();
       _session = await ort.InferenceSession.create(MODEL_URL, {
         executionProviders: ['wasm'],
         graphOptimizationLevel: 'all',
@@ -181,5 +176,5 @@ const FastDetector = (() => {
   function isReady()     { return _ready; }
   function isAvailable() { return _available; }
 
-  return { load, detect, isReady, isAvailable };
+  return { load, detect, isReady, isAvailable, setInputSize };
 })();

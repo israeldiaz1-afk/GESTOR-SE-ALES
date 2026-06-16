@@ -29,23 +29,43 @@ const YoloDetector = (() => {
   // Ruta del modelo dentro del repo (el usuario sube su model.onnx aquí)
   const MODEL_URL = './models/model.onnx';
   const LABELS_URL = './models/labels.json';
-  // CDN de ONNX Runtime Web
-  const ORT_CDN = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js';
+  // ONNX Runtime Web: preferir copia local (necesaria para multi-hilo con
+  // COOP/COEP en Cloudflare). Si no está en local, usar el CDN (GitHub Pages).
+  const ORT_LOCAL = './vendor/ort/ort.min.js';
+  const ORT_CDN_FALLBACK = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js';
+  const ORT_LOCAL_PATH = './vendor/ort/';
+  const ORT_CDN_PATH = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/';
+
+  // Comprueba si existe la copia local de ORT
+  async function _hasLocalORT() {
+    try { const r = await fetch(ORT_LOCAL, { method: 'HEAD' }); return r.ok; }
+    catch { return false; }
+  }
 
   // Carga ONNX Runtime Web desde CDN (solo una vez)
-  function _loadORT() {
+  async function _loadORT() {
+    if (window.ort) return window.ort;
+    const useLocal = await _hasLocalORT();
+    const srcJs   = useLocal ? ORT_LOCAL : ORT_CDN_FALLBACK;
+    const wasmDir = useLocal ? ORT_LOCAL_PATH : ORT_CDN_PATH;
+
     return new Promise((resolve, reject) => {
       if (window.ort) return resolve(window.ort);
       const script = document.createElement('script');
-      script.src = ORT_CDN;
+      script.src = srcJs;
       script.onload = () => {
         if (window.ort) {
-          // Configurar rutas de los binarios WASM
-          window.ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/';
-          // ESTABILIDAD MÓVIL: limitar hilos WASM (evita saturar CPU/memoria)
-          // Usar como mucho 2 hilos para no tumbar el dispositivo
+          window.ort.env.wasm.wasmPaths = wasmDir;
+          // Multi-hilo: si el navegador está aislado (COOP/COEP activos en
+          // Cloudflare), usar varios hilos. Si no (GitHub Pages), 1 hilo.
           const cores = (navigator.hardwareConcurrency || 4);
-          window.ort.env.wasm.numThreads = Math.min(2, Math.max(1, cores - 2));
+          if (self.crossOriginIsolated) {
+            window.ort.env.wasm.numThreads = Math.min(4, Math.max(2, cores - 2));
+            Logger.info(`ORT multi-hilo: ${window.ort.env.wasm.numThreads} hilos (aislado)`);
+          } else {
+            window.ort.env.wasm.numThreads = 1;
+            Logger.info('ORT single-thread (no aislado)');
+          }
           window.ort.env.wasm.simd = true;
           resolve(window.ort);
         } else {

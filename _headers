@@ -1,0 +1,13 @@
+# Cabeceras para activar crossOriginIsolated (multi-hilo WASM)
+# Cloudflare Pages aplica estas cabeceras a todo el sitio.
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+
+# Los modelos ONNX y wasm pueden cachearse mucho tiempo
+/models/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/vendor/*
+  Cross-Origin-Resource-Policy: cross-origin
+  Cache-Control: public, max-age=31536000

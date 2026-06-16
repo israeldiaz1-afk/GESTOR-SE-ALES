@@ -384,6 +384,14 @@
       <div class="settings-info-row"><span>Detector rápido vídeo</span><strong id="ai-fast-label">—</strong></div>
       <div class="settings-info-row"><span>Aceleración</span><strong id="ai-backend-label">—</strong></div>
       <div class="settings-info-row"><span>Eventos aprendizaje</span><strong id="learning-events-count">—</strong></div>
+      <div class="settings-control-row">
+        <label for="setting-distance">Alcance de detección en vídeo</label>
+        <select id="setting-distance" class="settings-select">
+          <option value="0.020">Solo señales cercanas (más rápido)</option>
+          <option value="0.012" selected>Equilibrado</option>
+          <option value="0.006">También lejanas (más lento)</option>
+        </select>
+      </div>
       <button class="btn-secondary" id="btn-reset-learning">Reiniciar aprendizaje</button>
     </section>
     <section class="settings-section">

@@ -36,11 +36,23 @@ const SignTracker = (() => {
   // detections: [{bbox:[x,y,w,h], score, classId, label, color, crop}]
   // fullFrameCanvas: el frame completo (para extraer recorte de calidad)
   // frameW, frameH: dimensiones del frame
+  // Tamaño mínimo relativo: señales más pequeñas que esto (lejanas) se ignoran.
+  // Una señal que ocupa menos del 1.2% del ancho del frame está demasiado lejos
+  // para evaluarla con calidad. Ajustable.
+  let _minSizeRatio = 0.012;
+  function setMinSize(ratio) { _minSizeRatio = ratio; }
+
   function update(detections, fullFrameCanvas, frameW, frameH) {
     const now = Date.now();
 
     for (const det of detections) {
       const [x, y, w, h] = det.bbox;
+
+      // FILTRO DE TAMAÑO: descartar señales demasiado pequeñas (lejanas).
+      // El ancho relativo de la señal respecto al frame.
+      const widthRatio = w / frameW;
+      if (widthRatio < _minSizeRatio) continue;
+
       const cx = (x + w/2) / frameW;
       const cy = (y + h/2) / frameH;
 
@@ -210,5 +222,5 @@ const SignTracker = (() => {
 
   function getActiveCount() { return _tracks.length; }
 
-  return { reset, update, pruneStale, getBestSigns, getActiveCount };
+  return { reset, update, pruneStale, getBestSigns, getActiveCount, setMinSize };
 })();

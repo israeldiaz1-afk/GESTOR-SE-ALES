@@ -233,6 +233,12 @@ async function _startVideo() {
   };
 
   // Loop de detección
+  // Aplicar el alcance de detección guardado (filtro de tamaño)
+  try {
+    const ms = localStorage.getItem('rs_min_size');
+    if (ms && SignTracker.setMinSize) SignTracker.setMinSize(parseFloat(ms));
+  } catch {}
+
   Detector.startLoop(videoEl, onDetections);
 
   // Pausa (FIX: sin arguments.callee, usa la función nombrada)
@@ -647,6 +653,20 @@ function _bindEvents() {
     try { await Learning.reset(); Toast.show('Aprendizaje reiniciado','warning'); } catch {}
     _updateStorage();
   });
+
+  // Control de alcance de detección (filtro de tamaño mínimo)
+  const distSel = q('setting-distance');
+  if (distSel) {
+    // Restaurar valor guardado
+    const saved = localStorage.getItem('rs_min_size');
+    if (saved) { distSel.value = saved; if (SignTracker.setMinSize) SignTracker.setMinSize(parseFloat(saved)); }
+    distSel.addEventListener('change', () => {
+      const v = parseFloat(distSel.value);
+      if (SignTracker.setMinSize) SignTracker.setMinSize(v);
+      try { localStorage.setItem('rs_min_size', distSel.value); } catch {}
+      Toast.show('Alcance de detección actualizado', 'success');
+    });
+  }
 
   // Modal export
   q('btn-modal-cancel')?.addEventListener('click', () => ExportUI.hide());
