@@ -1,5 +1,5 @@
 'use strict';
-const CACHE = 'roadsign-v1.9';
+const CACHE = 'roadsign-v2.1';
 const ASSETS = [
   './',
   './index.html',
@@ -24,6 +24,7 @@ const ASSETS = [
   './js/detection/markingDetector.js',
   './js/detection/classMapper.js',
   './js/detection/yoloDetector.js',
+  './js/detection/fastDetector.js',
   './js/detection/signTracker.js',
   './js/detection/detector.js',
   './js/camera.js',
@@ -31,6 +32,7 @@ const ASSETS = [
   './js/ui/detection-ui.js',
   './js/ui/evaluation-ui.js',
   './js/ui/export-ui.js',
+  './js/ui/imageViewer.js',
   './js/app.js',
 ];
 

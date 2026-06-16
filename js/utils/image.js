@@ -2,11 +2,23 @@
 const ImageUtils = {
   cropToCanvas(source,bbox,outSize=128){
     try{
-      const [x,y,w,h]=bbox,out=document.createElement('canvas');
-      out.width=out.height=outSize;
-      out.getContext('2d').drawImage(source,Math.max(0,x),Math.max(0,y),
-        Math.min(w,(source.width||source.videoWidth||640)),
-        Math.min(h,(source.height||source.videoHeight||480)),0,0,outSize,outSize);
+      const [x,y,w,h]=bbox;
+      const srcW=(source.width||source.videoWidth||640);
+      const srcH=(source.height||source.videoHeight||480);
+      // Recorte seguro dentro de los límites
+      const cx=Math.max(0,Math.round(x)), cy=Math.max(0,Math.round(y));
+      const cw=Math.max(1,Math.min(Math.round(w),srcW-cx));
+      const ch=Math.max(1,Math.min(Math.round(h),srcH-cy));
+      // Mantener proporción del recorte (no deformar la señal)
+      const aspect=cw/ch;
+      let outW=outSize, outH=outSize;
+      if(aspect>1) outH=Math.round(outSize/aspect);
+      else outW=Math.round(outSize*aspect);
+      const out=document.createElement('canvas');
+      out.width=outW; out.height=outH;
+      const ctx=out.getContext('2d');
+      ctx.imageSmoothingQuality='high';
+      ctx.drawImage(source,cx,cy,cw,ch,0,0,outW,outH);
       return out;
     }catch(e){const out=document.createElement('canvas');out.width=out.height=outSize;return out;}
   },

@@ -50,6 +50,11 @@ const EvaluationUI = (() => {
       thumb.width  = det.crop.width  || 96;
       thumb.height = det.crop.height || 96;
       try { thumb.getContext('2d').drawImage(det.crop, 0, 0); } catch(e) {}
+      // Al tocar la miniatura, abrir el visor con zoom y paneo
+      thumb.onclick = () => {
+        const label = (SIGN_CATALOG[det.signType]?.label || det.signType || 'Señal');
+        ImageViewer.open(det.crop, label);
+      };
     }
 
     // Info
@@ -57,6 +62,18 @@ const EvaluationUI = (() => {
     _set('eval-confidence',  `${prop.confidence || 0}%`);
     _set('eval-type-tag',    det.isHorizontal ? 'HORIZONTAL' : 'VERTICAL');
     _set('eval-location',    Geo.formatForDisplay(det.gps));
+    // Ubicación tocable: abre Google Maps en las coordenadas
+    const locEl = document.getElementById('eval-location');
+    if (locEl) {
+      const url = Geo.mapsUrl(det.gps);
+      if (url) {
+        locEl.style.cursor = 'pointer';
+        locEl.style.textDecoration = 'underline';
+        locEl.onclick = () => window.open(url, '_blank');
+      } else {
+        locEl.onclick = null;
+      }
+    }
     // Si viene del vídeo, indicar de cuántos fotogramas se eligió la mejor imagen
     const tsBase = det.ts ? new Date(det.ts).toLocaleString('es-ES',{timeStyle:'short',dateStyle:'short'}) : '—';
     const capInfo = det.timesDetected ? `  ·  mejor de ${det.timesDetected} capturas` : '';

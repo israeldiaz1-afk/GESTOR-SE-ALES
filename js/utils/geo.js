@@ -22,6 +22,11 @@ const Geo = {
   formatForDisplay(pos){
     if(!pos)return '— GPS —';
     const ns=pos.lat>=0?'N':'S',ew=pos.lng>=0?'E':'O';
-    return `${Math.abs(pos.lat).toFixed(5)}°${ns} ${Math.abs(pos.lng).toFixed(5)}°${ew}`;
+    const acc=pos.acc?` ±${Math.round(pos.acc)}m`:'';
+    return `${Math.abs(pos.lat).toFixed(5)}°${ns} ${Math.abs(pos.lng).toFixed(5)}°${ew}${acc}`;
+  },
+  mapsUrl(pos){
+    if(!pos)return null;
+    return `https://www.google.com/maps?q=${pos.lat},${pos.lng}`;
   },
 };

@@ -11,21 +11,28 @@ const Detector = (() => {
   let _fps = 0, _fcount = 0, _fts = 0;
   let _offscreen = null;
   let _useYolo = false;
+  let _useFast = false;  // detector rápido de 1 clase disponible
+  let _sweepMode = false;
   let _mode = 'idle'; // 'video' | 'photo' | 'idle'
   let _busy = false;  // evita solapar inferencias asíncronas
 
   async function init(onProgress) {
-    // Cargar YOLO (que internamente decide si hay modelo)
+    // Cargar YOLO de 55 clases (identificador preciso)
     await YoloDetector.load(onProgress);
     _useYolo = YoloDetector.isAvailable();
+
+    // Cargar el detector RÁPIDO de 1 clase (para vídeo)
+    await FastDetector.load(onProgress);
+    _useFast = FastDetector.isAvailable();
 
     // Cargar siempre el detector de color como respaldo
     await ObjectDetector.load(() => {});
 
-    Logger.info(`Detector listo. Motor: ${_useYolo ? 'YOLO neuronal' : 'color (fallback)'}`);
+    Logger.info(`Detector listo. Identificador: ${_useYolo ? 'YOLO 55 clases' : 'color'} | Detector rápido vídeo: ${_useFast ? 'SÍ (nano)' : 'no'}`);
   }
 
   function getEngine() { return _useYolo ? 'yolo' : 'color'; }
+  function hasFastDetector() { return _useFast; }
   function isReady()   { return YoloDetector.isReady() && ObjectDetector.isReady(); }
 
   // Detección sobre un frame estático (modo foto). Async por YOLO.
@@ -88,6 +95,66 @@ const Detector = (() => {
     };
   }
 
+  // Detección RÁPIDA para vídeo: localiza señales (sin clasificar).
+  // Usa el modelo nano de 1 clase si está; si no, cae al de 55 clases.
+  async function detectFast(canvas) {
+    if (!canvas || !canvas.width) return [];
+    try {
+      if (_useFast) {
+        const raw = await FastDetector.detect(canvas);
+        // Formato uniforme: señal genérica sin tipo (se identifica luego)
+        return raw.map(d => ({
+          id: `f${Date.now()}${Math.random().toString(36).slice(2,4)}`,
+          signType: 'SEÑAL',          // genérico; se identifica al evaluar
+          category: 'sin_identificar',
+          confidence: d.score,
+          score: d.score,
+          bbox: d.bbox,
+          sourceW: canvas.width, sourceH: canvas.height,
+          dominantColor: 'gray', color: '#f5c518',
+          isHorizontal: false,
+          pendingId: true,            // marca: pendiente de identificar
+          ts: Date.now(), gps: Geo.getPos(),
+        }));
+      }
+      // Sin modelo rápido: usar el de 55 clases (más lento pero ya identifica)
+      return await detectFrame(canvas, false);
+    } catch(e) {
+      Logger.warn('detectFast:', e);
+      return [];
+    }
+  }
+
+  // IDENTIFICACIÓN para el procesado: toma las mejores imágenes capturadas
+  // y las pasa por el modelo de 55 clases para saber QUÉ señal es cada una.
+  // signs: array de getBestSigns() del tracker (cada uno con .crop).
+  async function identifySigns(signs) {
+    if (!_useYolo) return signs; // sin identificador, devolver tal cual
+    const out = [];
+    for (const s of signs) {
+      let identified = { ...s };
+      try {
+        if (s.crop && s.crop.width) {
+          // Pasar el recorte por el modelo de 55 clases
+          const raw = await YoloDetector.detect(s.crop, 0.25, 0.45);
+          if (raw.length > 0) {
+            // Quedarse con la detección de mayor score
+            raw.sort((a,b) => b.score - a.score);
+            const mapped = ClassMapper.map(raw[0]);
+            identified.signType   = mapped.signType;
+            identified.category   = mapped.category;
+            identified.color      = mapped.color;
+            identified.label      = mapped.label;
+            identified.confidence = raw[0].score;
+            identified.pendingId  = false;
+          }
+        }
+      } catch(e) { Logger.warn('identify:', e); }
+      out.push(identified);
+    }
+    return out;
+  }
+
   // Loop de detección en vídeo. onFrame(detections) para dibujar.
   function startLoop(videoEl, onFrame) {
     stopLoop();
@@ -105,14 +172,13 @@ const Detector = (() => {
     // 480px de ancho es suficiente para detectar señales y mucho más rápido.
     const ANALYSIS_W = 480;
 
-    // Throttling adaptativo con valores REALISTAS para WASM en móvil.
-    // YOLOv8s en WASM puede tardar 1-3s por inferencia; forzar intervalos
-    // bajos saturaría el dispositivo. Damos margen amplio.
-    let interval = _useYolo ? 800 : 200;
-    const MIN_INTERVAL = _useYolo ? 500 : 150;   // nunca más rápido que esto
-    const MAX_INTERVAL = 2500;
-    // Descanso fijo extra tras cada inferencia, para que el dispositivo respire
-    const REST_AFTER = _useYolo ? 250 : 0;
+    // Throttling adaptativo. Con el detector RÁPIDO (nano 480, 1 clase) podemos
+    // ir mucho más rápido. Con el de 55 clases (fallback) vamos más lento.
+    const fastMode = _useFast;
+    let interval = fastMode ? 100 : (_useYolo ? 800 : 200);
+    const MIN_INTERVAL = fastMode ? 60 : (_useYolo ? 500 : 150);
+    const MAX_INTERVAL = fastMode ? 800 : 2500;
+    const REST_AFTER = fastMode ? 30 : (_useYolo ? 250 : 0);
 
     const loop = async () => {
       if (!_running) return;
@@ -131,8 +197,8 @@ const Detector = (() => {
           }
           offCtx.drawImage(videoEl, 0, 0, vW, vH, 0, 0, aW, aH);
 
-          // Detección SIN crop (el tracker genera su propio recorte de calidad)
-          const dets = await detectFrame(_offscreen, false);
+          // En vídeo usamos el DETECTOR RÁPIDO (solo localiza, no clasifica)
+          const dets = await detectFast(_offscreen);
 
           // Alimentar el tracker (que guarda el mejor recorte solo cuando mejora)
           if (dets.length > 0) {
@@ -182,7 +248,8 @@ const Detector = (() => {
   function getFPS() { return _fps; }
 
   return {
-    init, detectFrame, startLoop, stopLoop,
-    getBestSigns, getFPS, isReady, getEngine,
+    init, detectFrame, detectFast, identifySigns, startLoop, stopLoop,
+    getBestSigns, getFPS, isReady, getEngine, hasFastDetector,
+    setSweepMode: (v) => { _sweepMode = v; },
   };
 })();

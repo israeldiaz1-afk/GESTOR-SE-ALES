@@ -167,12 +167,12 @@ const SignTracker = (() => {
   function _extractCrop(frameCanvas, bbox) {
     const [x, y, w, h] = bbox.map(Math.round);
     const out = document.createElement('canvas');
-    out.width = 128; out.height = 128;
+    out.width = 256; out.height = 256;
     try {
       out.getContext('2d').drawImage(frameCanvas,
         Math.max(0, x), Math.max(0, y),
         Math.min(w, frameCanvas.width - x), Math.min(h, frameCanvas.height - y),
-        0, 0, 128, 128);
+        0, 0, 256, 256);
     } catch {}
     return out;
   }

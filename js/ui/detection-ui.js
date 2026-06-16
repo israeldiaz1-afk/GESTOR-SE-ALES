@@ -42,7 +42,9 @@ const DetectionUI = (() => {
       if (w < 5 || h < 5) continue; // bbox demasiado pequeño tras escalar
 
       const color = COLORS[det.category] || '#f5c518';
-      const label = (SIGN_CATALOG[det.signType]?.label || det.signType) + ' ' + Math.round(det.confidence*100) + '%';
+      // En vídeo rápido las señales aún no están identificadas: mostrar "Señal"
+      const name = det.pendingId ? 'Señal' : (SIGN_CATALOG[det.signType]?.label || det.signType);
+      const label = name + ' ' + Math.round(det.confidence*100) + '%';
 
       // Recuadro
       ctx.save();

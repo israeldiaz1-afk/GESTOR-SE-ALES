@@ -58,6 +58,7 @@ const Profile = {
 const App = {
   aiReady:    false,
   videoActive:false,
+  sweepMode:  false,
   photoCanvas:null,
   photoDets:  [],
   // Canvas del cámara para modo foto
@@ -222,7 +223,8 @@ async function _startVideo() {
     if (dets.length > 0) DetectionUI.accumulate(dets);
     DetectionUI.drawDetections(canvasEl, dets);
 
-    const total = DetectionUI.getAccumulated().length;
+    // El contador refleja las señales ÚNICAS rastreadas (las que se evaluarán)
+    const total = Detector.getBestSigns().length;
     _setTxt('video-detection-count', String(total));
     _setTxt('evaluate-count-badge', String(total));
     const btn = document.getElementById('btn-video-evaluate');
@@ -257,7 +259,20 @@ function _stopVideo() {
   if (c) c.getContext('2d').clearRect(0,0,c.width,c.height);
 }
 
-function _evalFromVideo() {
+function _toggleSweep() {
+  App.sweepMode = !App.sweepMode;
+  const btn = document.getElementById('btn-video-sweep');
+  if (btn) btn.classList.toggle('sweep-active', App.sweepMode);
+  if (App.sweepMode) {
+    Toast.show('Modo barrido: muévete despacio o gira sobre ti mismo. Captura todas las señales del entorno.', 'info');
+  } else {
+    Toast.show('Modo normal', 'info');
+  }
+  // Informar al detector del modo (ajusta ritmo: en barrido prioriza cobertura)
+  if (Detector.setSweepMode) Detector.setSweepMode(App.sweepMode);
+}
+
+async function _evalFromVideo() {
   Detector.stopLoop();
 
   const v = document.getElementById('video-feed');
@@ -267,10 +282,16 @@ function _evalFromVideo() {
   snap.getContext('2d').drawImage(v, 0, 0);
 
   // Usar las MEJORES imágenes capturadas durante el vídeo (tracker)
-  const best = Detector.getBestSigns();
+  let best = Detector.getBestSigns();
 
   if (best.length > 0) {
-    // Cada señal ya trae su mejor recorte (bestCrop) y metadatos
+    // FASE DE IDENTIFICACIÓN: pasar cada mejor imagen por el modelo de 55
+    // clases para saber QUÉ señal es (en vídeo solo se detectó que HABÍA señal).
+    Toast.show(`Identificando ${best.length} señales…`, 'info');
+    try {
+      best = await Detector.identifySigns(best);
+    } catch(e) { console.warn('identify error:', e); }
+
     const dets = best.map(s => ({
       id: s.id,
       signType: s.signType,
@@ -503,12 +524,9 @@ async function _updateStorage() {
   // Etiquetas del motor IA
   try {
     const engine = Detector.getEngine();
-    _setTxt('ai-engine-label', engine === 'yolo' ? 'YOLOv8 neuronal' : 'Color + forma');
-    if (engine === 'yolo' && window.YoloDetector) {
-      _setTxt('ai-backend-label', YoloDetector.getBackend() === 'webgl' ? 'GPU (WebGL)' : 'CPU (WASM)');
-    } else {
-      _setTxt('ai-backend-label', 'CPU (local)');
-    }
+    _setTxt('ai-engine-label', engine === 'yolo' ? 'YOLOv8 (55 clases)' : 'Color + forma');
+    _setTxt('ai-fast-label', Detector.hasFastDetector() ? 'Activo (nano 1 clase)' : 'No instalado');
+    _setTxt('ai-backend-label', 'CPU (WASM)');
   } catch {}
 }
 
@@ -565,6 +583,7 @@ function _bindEvents() {
   // Vídeo
   q('btn-video-back')?.addEventListener('click', () => { _stopVideo(); Screens.show('home',false); _refreshHome(); });
   q('btn-video-flip')?.addEventListener('click', () => Camera.flip().catch(e=>Toast.show(e.message,'error')));
+  q('btn-video-sweep')?.addEventListener('click', _toggleSweep);
   q('btn-video-evaluate')?.addEventListener('click', _evalFromVideo);
 
   // Foto
