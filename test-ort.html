@@ -30,7 +30,7 @@ async function run() {
 
   // 2. ¿Los archivos vendor son accesibles?
   const files = [
-    './vendor/ort/ort.all.min.js',
+    './vendor/ort/ort.min.js',
     './vendor/ort/ort-wasm-simd-threaded.wasm',
     './vendor/ort/ort-wasm-simd-threaded.mjs',
     './vendor/ort/ort-wasm-simd.wasm',  // el de single-thread (puede faltar)
@@ -52,7 +52,7 @@ async function run() {
   log('Cargando ONNX Runtime…', 'info');
   try {
     const script = document.createElement('script');
-    script.src = './vendor/ort/ort.all.min.js';
+    script.src = './vendor/ort/ort.min.js';
     await new Promise((res, rej) => { script.onload = res; script.onerror = () => rej(new Error('script onerror')); document.head.appendChild(script); });
     if (window.ort) {
       log('✓ ONNX Runtime cargado', 'ok');

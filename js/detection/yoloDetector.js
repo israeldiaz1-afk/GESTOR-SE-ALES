@@ -33,7 +33,7 @@ const YoloDetector = (() => {
   // COOP/COEP en Cloudflare). Si no está en local, usar el CDN (GitHub Pages).
   const ORT_LOCAL = './vendor/ort/ort.min.js';
   const ORT_CDN_FALLBACK = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js';
-  const ORT_LOCAL_PATH = './vendor/ort/';
+  const ORT_LOCAL_PATH = new URL('vendor/ort/', document.baseURI).href;
   const ORT_CDN_PATH = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/';
 
   // Comprueba si existe la copia local de ORT
