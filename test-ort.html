@@ -68,9 +68,10 @@ async function run() {
         log('✓✓✓ MODELO CARGADO CORRECTAMENTE', 'ok');
         log(`Entradas: ${sess.inputNames}, Salidas: ${sess.outputNames}`, 'ok');
       } catch(e) {
-        log(`✗ Error cargando modelo: ${e.message || e}`, 'err');
-        log(`Detalle: ${e.message}`, 'err');
-        log(`Stack: ${e.stack}`, 'err');
+        const msg = e?.message || e?.toString() || 'sin mensaje';
+        log('✗ Error cargando modelo:', 'err');
+        log(msg, 'err');
+        if (e?.stack) log('STACK: ' + e.stack.split('\n').slice(0,3).join(' | '), 'err');
       }
     } else {
       log('✗ window.ort no existe tras cargar el script', 'err');
