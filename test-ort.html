@@ -69,7 +69,8 @@ async function run() {
         log(`Entradas: ${sess.inputNames}, Salidas: ${sess.outputNames}`, 'ok');
       } catch(e) {
         log(`✗ Error cargando modelo: ${e.message || e}`, 'err');
-        log(`Detalle: ${JSON.stringify(e)}`, 'err');
+        log(`Detalle: ${e.message}`, 'err');
+        log(`Stack: ${e.stack}`, 'err');
       }
     } else {
       log('✗ window.ort no existe tras cargar el script', 'err');
