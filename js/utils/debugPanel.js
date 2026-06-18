@@ -35,19 +35,22 @@
     render();
   }
 
-  // Interceptar consola
-  console.log   = (...a) => { orig.log(...a);   add('log', a); };
-  console.warn  = (...a) => { orig.warn(...a);  add('warn', a); };
-  console.error = (...a) => { orig.error(...a); add('error', a); };
-  console.info  = (...a) => { orig.info(...a);  add('info', a); };
+  const debugEnabled = location.search.includes('debug');
 
-  // Capturar errores no controlados
-  window.addEventListener('error', e => {
-    add('error', [`JS ERROR: ${e.message} @ ${e.filename}:${e.lineno}`]);
-  });
-  window.addEventListener('unhandledrejection', e => {
-    add('error', [`PROMISE ERROR: ${e.reason?.message || e.reason}`]);
-  });
+  // Solo interceptar consola y capturar errores si el modo debug está activo
+  if (debugEnabled) {
+    console.log   = (...a) => { orig.log(...a);   add('log', a); };
+    console.warn  = (...a) => { orig.warn(...a);  add('warn', a); };
+    console.error = (...a) => { orig.error(...a); add('error', a); };
+    console.info  = (...a) => { orig.info(...a);  add('info', a); };
+
+    window.addEventListener('error', e => {
+      add('error', [`JS ERROR: ${e.message} @ ${e.filename}:${e.lineno}`]);
+    });
+    window.addEventListener('unhandledrejection', e => {
+      add('error', [`PROMISE ERROR: ${e.reason?.message || e.reason}`]);
+    });
+  }
 
   function render() {
     if (!logBox || !visible) return;
@@ -132,12 +135,14 @@
     ta.remove();
   }
 
-  // Construir cuando el DOM esté listo
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', build);
-  } else {
-    build();
+  // El panel de diagnóstico solo se activa si la URL incluye ?debug
+  // (ej. https://...pages.dev/?debug). En uso normal queda oculto.
+  if (debugEnabled) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', build);
+    } else {
+      build();
+    }
+    console.log('[DebugPanel] activo — añade ?debug a la URL para verlo');
   }
-
-  console.log('[DebugPanel] activo — pulsa el botón 🐞 para ver el diagnóstico');
 })();

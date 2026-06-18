@@ -132,7 +132,8 @@ const YoloDetector = (() => {
       _ready = true;
       Logger.info(`YOLO cargado (${_backend}), input: ${_inputName}`);
     } catch (e) {
-      Logger.error('YOLO load error:', e);
+      const msg = e?.message || e?.toString() || 'error desconocido';
+      Logger.error('Error cargando modelo IA:', msg);
       _available = false;
       _ready = true; // fallback a color
       onProgress?.('Error IA — usando modo color', 100);
@@ -197,30 +198,8 @@ const YoloDetector = (() => {
       const data = output[outName].data;
       const dims = output[outName].dims; // típicamente [1, 4+nc, 8400]
 
-      // DIAGNÓSTICO: registrar forma de salida y score máximo (solo 1ª vez)
-      if (!_diagDone) {
-        _diagDone = true;
-        let gmax = 0;
-        const ch = dims[1], an = dims[2], ncls = ch - 4;
-        for (let a = 0; a < an; a++) {
-          for (let c = 0; c < ncls; c++) {
-            const s = data[(4 + c) * an + a];
-            if (s > gmax) gmax = s;
-          }
-        }
-        console.log('[YOLO diag] salida dims:', JSON.stringify(dims),
-                    '| score máximo en frame:', gmax.toFixed(3),
-                    '| nº clases:', ncls, '| labels cargadas:', _labels.length);
-      }
-
       const detections = _decodeOutput(data, dims, scale, padX, padY, scoreThreshold);
       const final = _nms(detections, iouThreshold);
-      if (!_diagCount || _diagCount < 3) {
-        _diagCount = (_diagCount || 0) + 1;
-        console.log('[YOLO diag2] tras umbral:', detections.length,
-                    '| tras NMS:', final.length,
-                    (final[0] ? `| 1ª: ${final[0].label} score ${final[0].score.toFixed(2)} bbox [${final[0].bbox.map(n=>Math.round(n)).join(',')}]` : ''));
-      }
       return final;
     } catch (e) {
       Logger.warn('YOLO detect error:', e);

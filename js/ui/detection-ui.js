@@ -112,7 +112,6 @@ const DetectionUI = (() => {
     // coincide con el espacio de las detecciones (sized). NO redimensionar
     // ni borrar: dibujar las cajas directamente encima de la foto.
     if (!dets || dets.length === 0) return;
-    console.log('[DRAW diag] dibujando', dets.length, 'cajas en canvas', canvas.width + 'x' + canvas.height, '| 1ª bbox:', dets[0].bbox.map(n=>Math.round(n)), '| sourceW/H:', dets[0].sourceW, dets[0].sourceH);
     const ctx = canvas.getContext('2d');
 
     for (const det of dets) {

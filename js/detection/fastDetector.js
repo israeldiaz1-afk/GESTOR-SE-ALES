@@ -115,11 +115,6 @@ const FastDetector = (() => {
       const data = out[oname].data;
       const dims = out[oname].dims; // [1, 5, N] para 1 clase (4 bbox + 1 score)
 
-      if (!_diagDone) {
-        _diagDone = true;
-        console.log('[FAST diag] salida dims:', JSON.stringify(dims));
-      }
-
       const dets = _decode(data, dims, scale, padX, padY, scoreThreshold);
       return _nms(dets, iouThreshold);
     } catch (e) {
